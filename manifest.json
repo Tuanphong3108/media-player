@@ -1,0 +1,37 @@
+{
+  "name": "Media Player Professional",
+  "short_name": "Media Player",
+  "description": "Trình phát đa phương tiện chuẩn Material Design 3 chuyên nghiệp.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0A090C",
+  "theme_color": "#0A090C",
+  "icons": [
+    {
+      "src": "https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/movie/default/48px.svg",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "https://via.placeholder.com/192/D0BCFF/381E72?text=MP",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://via.placeholder.com/512/D0BCFF/381E72?text=MediaPlayer",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "index.html",
+      "accept": {
+        "video/*": [".mp4", ".webm", ".mkv", ".mov", ".avi"]
+      }
+    }
+  ]
+}
