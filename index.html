@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Player Professional</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0A090C">
+    <!-- Import Google Sans Flex & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@100..1000&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <style>
+        :root {
+            --md-sys-color-primary: #D0BCFF;
+            --md-sys-color-on-primary: #381E72;
+            --md-sys-color-surface: #0A090C;
+            --md-sys-color-on-surface: #E6E1E5;
+            --md-sys-color-surface-variant: #49454F;
+            --md-sys-color-tertiary: #EFB8C8;
+            --md-sys-color-on-tertiary: #492532;
+            --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans Flex', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .player-root {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-stage {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            cursor: none;
+            position: relative;
+            /* Đảm bảo không gian hiển thị luôn tối đa */
+            width: 100%;
+            height: 100%;
+        }
+
+        video {
+            /* Fix quan trọng: Đảm bảo video dọc hay ngang đều không bị cắt */
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain; /* Giữ nguyên tỷ lệ, không bao giờ cắt hình */
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--md-sys-color-surface);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: var(--transition-smooth);
+        }
+
+        .hero-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.02);
+        }
+
+        .btn-fab {
+            padding: 16px 32px;
+            background: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .ui-layer {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 24px;
+            background: linear-gradient(transparent 50%, rgba(0,0,0,0.8));
+            opacity: 0;
+            transition: var(--transition-smooth);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .ui-layer * { pointer-events: auto; }
+        .player-root.active-ui .ui-layer { opacity: 1; }
+        .player-root.active-ui .video-stage { cursor: default; }
+
+        .controls-card {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .seek-box {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+            transition: height 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        .seek-box:hover, .seek-box.dragging { height: 8px; }
+
+        .seek-progress {
+            height: 100%;
+            background: var(--md-sys-color-primary);
+            width: 0%;
+            border-radius: 2px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .group { display: flex; align-items: center; gap: 8px; }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .btn-icon:hover { background: rgba(255,255,255,0.1); }
+        .btn-icon span { font-size: 24px; transition: font-variation-settings 0.2s; }
+        .btn-icon:hover span { font-variation-settings: 'FILL' 1; }
+        .btn-icon.active { color: var(--md-sys-color-primary); }
+        .btn-icon.active span { font-variation-settings: 'FILL' 1; }
+
+        .speed-badge {
+            position: absolute;
+            top: 2px;
+            right: -2px;
+            background: var(--md-sys-color-tertiary);
+            color: var(--md-sys-color-on-tertiary);
+            font-size: 10px;
+            font-weight: 800;
+            padding: 1px 4px;
+            border-radius: 6px;
+            display: none;
+            pointer-events: none;
+        }
+        .speed-badge.show { display: block; }
+
+        .time { font-size: 13px; color: #ccc; margin-left: 8px; font-variant-numeric: tabular-nums; }
+
+        input[type="range"] { accent-color: var(--md-sys-color-primary); width: 80px; }
+
+        #loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 110;
+        }
+        #loader img { width: 60px; filter: grayscale(1) brightness(1.5); }
+
+        .speed-menu {
+            position: absolute;
+            bottom: 100px;
+            right: 40px;
+            background: var(--md-sys-color-surface-variant);
+            border-radius: 12px;
+            padding: 8px;
+            display: none;
+            flex-direction: column;
+            min-width: 160px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .speed-menu.active { display: flex; }
+        .speed-item { padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .speed-item:hover { background: rgba(255,255,255,0.1); }
+        .speed-item.selected { color: var(--md-sys-color-primary); font-weight: bold; }
+
+        .seek-tooltip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .seek-tooltip.show { opacity: 1; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div class="seek-tooltip" id="sTip"></div>
+
+    <div class="player-root" id="root">
+        <div id="loader"><img src="https://tuanphong3108.github.io/md3-loading/Loading_Indicator.gif" alt="Loading"></div>
+
+        <div class="hero-overlay" id="hero">
+            <span class="material-symbols-outlined" style="font-size: 64px; color: var(--md-sys-color-primary); margin-bottom: 20px;">movie</span>
+            <h2 style="font-size: 24px; margin-bottom: 32px;">Media Player Professional</h2>
+            <button class="btn-fab" onclick="document.getElementById('videoFile').click()">
+                <span class="material-symbols-outlined">add</span> Mở tệp video
+            </button>
+        </div>
+
+        <input type="file" id="videoFile" accept="video/*" hidden>
+
+        <div class="video-stage" id="videoContainer">
+            <video id="v" playsinline></video>
+        </div>
+
+        <div class="ui-layer" id="ui">
+            <div class="speed-menu" id="sMenu">
+                <div class="speed-item" data-speed="0.5">0.5x</div>
+                <div class="speed-item" data-speed="0.75">0.75x</div>
+                <div class="speed-item selected" data-speed="1">Bình thường (1x)</div>
+                <div class="speed-item" data-speed="1.25">1.25x</div>
+                <div class="speed-item" data-speed="1.5">1.5x</div>
+                <div class="speed-item" data-speed="2">2.0x</div>
+            </div>
+
+            <div class="controls-card">
+                <div class="seek-box" id="sBox"><div class="seek-progress" id="sBar"></div></div>
+                <div class="actions">
+                    <div class="group">
+                        <button class="btn-icon" id="playBtn"><span class="material-symbols-outlined" id="pIco">play_arrow</span></button>
+                        <button class="btn-icon" id="rewindBtn" title="Lùi 10 giây"><span class="material-symbols-outlined">replay_10</span></button>
+                        <button class="btn-icon" id="forwardBtn" title="Tiến 30 giây"><span class="material-symbols-outlined">forward_30</span></button>
+                        <button class="btn-icon" id="loopBtn" title="Lặp lại"><span class="material-symbols-outlined">repeat</span></button>
+                        <div class="group" style="margin-left: 8px;">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">volume_up</span>
+                            <input type="range" id="vRange" min="0" max="1" step="0.05" value="1">
+                        </div>
+                        <div class="time"><span id="cTime">0:00</span> / <span id="tTime">0:00</span></div>
+                    </div>
+                    <div class="group">
+                        <button class="btn-icon" id="speedBtn" title="Tốc độ">
+                            <span class="material-symbols-outlined">speed</span>
+                            <div class="speed-badge" id="sBadge">1x</div>
+                        </button>
+                        <button class="btn-icon" id="fullBtn" title="Toàn màn hình"><span class="material-symbols-outlined">fullscreen</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+
+        const video = document.getElementById('v'), 
+              fileIn = document.getElementById('videoFile'),
+              hero = document.getElementById('hero'),
+              ui = document.getElementById('ui'),
+              root = document.getElementById('root'),
+              pBtn = document.getElementById('playBtn'),
+              pIco = document.getElementById('pIco'),
+              sBar = document.getElementById('sBar'),
+              sBox = document.getElementById('sBox'),
+              sBtn = document.getElementById('speedBtn'),
+              sMenu = document.getElementById('sMenu'),
+              sBadge = document.getElementById('sBadge'),
+              loader = document.getElementById('loader'),
+              videoContainer = document.getElementById('videoContainer'),
+              sTip = document.getElementById('sTip');
+
+        let isDragging = false;
+
+        if ('launchQueue' in window) {
+            window.launchQueue.setConsumer(async (launchParams) => {
+                if (launchParams.files.length > 0) {
+                    const fileEntry = launchParams.files[0];
+                    const file = await fileEntry.getFile();
+                    loadVideo(file);
+                }
+            });
+        }
+
+        function loadVideo(file) {
+            if(file) {
+                loader.style.display = 'block';
+                video.src = URL.createObjectURL(file);
+                hero.classList.add('hidden');
+                video.play();
+            }
+        }
+
+        function showTip(text, icon) {
+            sTip.innerHTML = `<span class="material-symbols-outlined">${icon}</span> ${text}`;
+            sTip.classList.add('show');
+            setTimeout(() => sTip.classList.remove('show'), 800);
+        }
+
+        fileIn.onchange = (e) => loadVideo(e.target.files[0]);
+
+        video.onwaiting = () => { if(!video.paused) loader.style.display = 'block'; };
+        video.onplaying = () => { loader.style.display = 'none'; };
+        video.onloadedmetadata = () => {
+            document.getElementById('tTime').textContent = formatTime(video.duration);
+            pIco.textContent = 'pause';
+        };
+
+        const toggle = () => {
+            if(video.paused) { video.play(); pIco.textContent = 'pause'; }
+            else { video.pause(); pIco.textContent = 'play_arrow'; }
+            wake();
+        };
+
+        videoContainer.onclick = toggle;
+        pBtn.onclick = (e) => { e.stopPropagation(); toggle(); };
+
+        document.getElementById('rewindBtn').onclick = (e) => {
+            e.stopPropagation();
+            video.currentTime -= 10;
+            showTip("-10s", "replay_10");
+        };
+        document.getElementById('forwardBtn').onclick = (e) => {
+            e.stopPropagation();
+            video.currentTime += 30;
+            showTip("+30s", "forward_30");
+        };
+
+        video.ontimeupdate = () => {
+            if(video.duration && !isDragging) {
+                const p = (video.currentTime / video.duration) * 100;
+                sBar.style.width = p + '%';
+                document.getElementById('cTime').textContent = formatTime(video.currentTime);
+            }
+        };
+
+        const scrub = (e) => {
+            const rect = sBox.getBoundingClientRect();
+            let clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+            let pos = (clientX - rect.left) / rect.width;
+            pos = Math.max(0, Math.min(1, pos));
+            sBar.style.width = (pos * 100) + '%';
+            if (isDragging) video.currentTime = pos * video.duration;
+        };
+
+        sBox.onmousedown = (e) => { isDragging = true; scrub(e); };
+        window.onmousemove = (e) => { if (isDragging) scrub(e); };
+        window.onmouseup = () => isDragging = false;
+
+        sBtn.onclick = (e) => { e.stopPropagation(); sMenu.classList.toggle('active'); };
+        
+        document.querySelectorAll('.speed-item').forEach(item => {
+            item.onclick = (e) => {
+                e.stopPropagation();
+                const speed = parseFloat(item.dataset.speed);
+                video.playbackRate = speed;
+                
+                if (speed !== 1) {
+                    sBadge.textContent = speed + 'x';
+                    sBadge.classList.add('show');
+                } else {
+                    sBadge.classList.remove('show');
+                }
+
+                document.querySelector('.speed-item.selected').classList.remove('selected');
+                item.classList.add('selected');
+                sMenu.classList.remove('active');
+            };
+        });
+
+        const lBtn = document.getElementById('loopBtn');
+        lBtn.onclick = (e) => {
+            e.stopPropagation();
+            video.loop = !video.loop;
+            lBtn.classList.toggle('active', video.loop);
+        };
+
+        document.getElementById('vRange').oninput = (e) => { video.volume = e.target.value; };
+        document.getElementById('fullBtn').onclick = (e) => {
+            e.stopPropagation();
+            if (!document.fullscreenElement) root.requestFullscreen();
+            else document.exitFullscreen();
+        };
+
+        let timer;
+        const wake = () => {
+            root.classList.add('active-ui');
+            clearTimeout(timer);
+            if(!video.paused) timer = setTimeout(() => {
+                root.classList.remove('active-ui');
+                sMenu.classList.remove('active');
+            }, 3000);
+        };
+
+        root.onmousemove = wake;
+        document.onclick = () => sMenu.classList.remove('active');
+
+        function formatTime(s) {
+            const min = Math.floor(s/60), sec = Math.floor(s%60);
+            return min + ":" + (sec < 10 ? '0'+sec : sec);
+        }
+
+        window.onkeydown = (e) => {
+            if(e.code === 'Space') { e.preventDefault(); toggle(); }
+            if(e.code === 'ArrowRight') { video.currentTime += 5; wake(); }
+            if(e.code === 'ArrowLeft') { video.currentTime -= 5; wake(); }
+        };
+    </script>
+</body>
+</html>
